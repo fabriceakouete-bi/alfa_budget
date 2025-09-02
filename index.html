@@ -4,338 +4,105 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Fabrice & Alesia Family Budget</title>
-    <meta name="description" content="Real-time collaborative family budget tracker">
-    
-    <!-- Production React & Dependencies -->
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/lucide-react@latest/dist/umd/lucide-react.js"></script>
-    
-    <!-- PWA Features -->
-    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiRmFicmljZSAmIEFsZXNpYSBCdWRnZXQiLCJzaG9ydF9uYW1lIjoiRmFtaWx5QnVkZ2V0IiwiaWNvbnMiOltdLCJzdGFydF91cmwiOiIvIiwiZGlzcGxheSI6InN0YW5kYWxvbmUiLCJ0aGVtZV9jb2xvciI6IiMzQjgyRjYiLCJiYWNrZ3JvdW5kX2NvbG9yIjoiI0Y5RkFGQiJ9">
-    <meta name="theme-color" content="#3B82F6">
-    
-    <!-- Mobile Optimizations -->
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Family Budget">
+    <style>
+        .spinner { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
-    <div id="root">
-        <!-- Loading Screen -->
-        <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(to bottom right, #dbeafe, #f3e8ff); font-family: system-ui;">
-            <div style="text-align: center;">
-                <div style="width: 48px; height: 48px; border: 4px solid #3b82f6; border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
-                <h2 style="color: #1f2937; margin: 0;">Loading Family Budget...</h2>
-            </div>
-        </div>
-        <style>
-            @keyframes spin { to { transform: rotate(360deg); } }
-        </style>
-    </div>
+    <div id="root"></div>
     
-    <script type="text/babel">
-        // 🔧 CONFIGURATION - Replace with your Supabase credentials
-        const USE_SUPABASE = false;
-        const SUPABASE_URL = 'https://gwjauglgkgfesldncnvg.supabase.co';  // Replace with your Supabase project URL
-        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imd3amF1Z2xna2dmZXNsZG5jbnZnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTY3NjgyNTEsImV4cCI6MjA3MjM0NDI1MX0.MGxrqSlH7ymyZ_Qh0pvEYi4MKSAAdqwNrlVMPA-Kb0U';  // Replace with your Supabase anon key
-        
-        // Production Supabase client
-        class SupabaseClient {
-            constructor(url, key) {
-                this.url = url;
-                this.key = key;
-            }
-            
-            async query(table, data = null, method = 'GET', filters = '') {
-                const endpoint = `${this.url}/rest/v1/${table}${filters}`;
-                const headers = {
-                    'apikey': this.key,
-                    'Authorization': `Bearer ${this.key}`,
-                    'Content-Type': 'application/json',
-                    'Prefer': method === 'POST' ? 'return=representation' : ''
-                };
-                
-                const options = {
-                    method,
-                    headers,
-                    ...(data && method !== 'GET' && { body: JSON.stringify(data) })
-                };
-                
-                try {
-                    const response = await fetch(endpoint, options);
-                    if (!response.ok) {
-                        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-                    }
-                    return await response.json();
-                } catch (error) {
-                    console.error('Supabase query error:', error);
-                    return null;
-                }
-            }
-            
-            async saveTransaction(transaction) {
-                return await this.query('transactions', transaction, 'POST');
-            }
-            
-            async loadTransactions(roomId) {
-                return await this.query('transactions', null, 'GET', `?room_id=eq.${roomId}&order=created_at.desc`);
-            }
-            
-            async createRoom(roomData) {
-                return await this.query('budget_rooms', roomData, 'POST');
-            }
-        }
-        
-        const { useState, useEffect } = React;
-        const { PlusCircle, Trash2, DollarSign, TrendingUp, TrendingDown, Calculator, Calendar, Home, CheckCircle, Clock, Users, Wifi, WifiOff, User, Settings } = lucideReact;
+    <script>
+        // Simple Budget Tracker - No Babel, No Lucide Icons
+        const { useState, useEffect, createElement: e } = React;
 
-        const SimpleBudgetTracker = () => {
+        const BudgetApp = () => {
             // User & Connection States
             const [currentUser, setCurrentUser] = useState('');
-            const [isConnected, setIsConnected] = useState(false);
-            const [roomId, setRoomId] = useState('');
             const [showUserSetup, setShowUserSetup] = useState(true);
-            const [collaboratorOnline, setCollaboratorOnline] = useState(false);
-            
-            // App States
             const [currentScreen, setCurrentScreen] = useState('dashboard');
+            
+            // Data States
             const [income, setIncome] = useState([]);
             const [expenses, setExpenses] = useState([]);
-            const [plannedTransactions, setPlannedTransactions] = useState([]);
-            const [customIncomeCategories, setCustomIncomeCategories] = useState([]);
-            const [customExpenseCategories, setCustomExpenseCategories] = useState([]);
-            
-            // Calendar & Modal States
             const [showAddModal, setShowAddModal] = useState(false);
-            const [calendarSelectedDate, setCalendarSelectedDate] = useState(null);
+            const [selectedDate, setSelectedDate] = useState(null);
             const [currentMonth, setCurrentMonth] = useState(new Date());
 
-            const defaultIncomeCategories = [
-                'Fabrice - Maxa Salary',
-                'Fabrice - Alfa Company', 
-                'Alesia - Air Transat Salary',
-                'Alesia - Family Allocation',
-                'Rental - Oscar Benoit (Dominique)',
-                'Rental - Roi René Unit 1 (Jacques)',
-                'Rental - Roi René Unit 2 (Guy)', 
-                'Rental - Roi René Unit 3 (Alain)',
-                'Tax Refund',
-                'Gifts/Bonus',
-                'Other Income'
+            // Categories
+            const incomeCategories = [
+                'Fabrice - Maxa Salary', 'Fabrice - Alfa Company', 'Alesia - Air Transat Salary',
+                'Alesia - Family Allocation', 'Rental - Oscar Benoit (Dominique)',
+                'Rental - Roi René Unit 1 (Jacques)', 'Rental - Roi René Unit 2 (Guy)', 
+                'Rental - Roi René Unit 3 (Alain)', 'Tax Refund', 'Other Income'
             ];
 
-            const defaultExpenseCategories = [
-                'Food & Groceries', 'Kids - Livia Expenses', 'Kids - Elio Expenses', 'Kids - Insurance',
-                'Childcare/Activities', 'Main Residence - Mortgage', 'Main Residence - Utilities',
-                'Main Residence - Maintenance', 'Oscar Benoit Condo - Expenses', 'Roi René Triplex - Expenses',
-                'Land - Mortgage Payment', 'Property Taxes', 'Home Insurance', 'Transportation/Gas',
-                'Car Insurance/Maintenance', 'Fabrice - Personal', 'Alesia - Personal', 'Entertainment/Dining Out',
-                'Clothing', 'Healthcare/Medical', 'Fabrice - FTQ Contributions', 'Fabrice - Desjardins REER',
-                'Fabrice - Wealthsimple', 'Fabrice - Sun Life', 'Alesia - Manulife', 'Alesia - TD Savings',
-                'Emergency Fund', 'Phone/Internet', 'Subscriptions', 'Professional Services',
-                'Gifts/Donations', 'Travel/Vacation', 'Emergency Expenses', 'Other Expenses'
+            const expenseCategories = [
+                'Food & Groceries', 'Kids - Livia Expenses', 'Kids - Elio Expenses',
+                'Main Residence - Mortgage', 'Utilities', 'Transportation', 'Property Expenses',
+                'Fabrice - Personal', 'Alesia - Personal', 'Fabrice - FTQ', 'Alesia - Savings'
             ];
 
-            const incomeCategories = customIncomeCategories.length > 0 ? customIncomeCategories : defaultIncomeCategories;
-            const expenseCategories = customExpenseCategories.length > 0 ? customExpenseCategories : defaultExpenseCategories;
+            // Helper Functions
+            const formatDate = (date) => date.toISOString().split('T')[0];
+            const getUserColor = (user) => user === 'Fabrice' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
 
-            // Initialize Supabase client
-            const supabase = new SupabaseClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-            // Helper functions
-            const generateRoomId = () => 'fabrice-alesia-' + Math.random().toString(36).substr(2, 8);
-            const getUserColor = (user) => user === 'Fabrice' ? 'text-blue-600 bg-blue-100' : 'text-purple-600 bg-purple-100';
-            const formatDateForInput = (date) => date.toISOString().split('T')[0];
-
-            // User setup with real database
-            const setupUser = async (userName) => {
-                const newRoomId = generateRoomId();
+            // Setup User
+            const setupUser = (userName) => {
+                const roomId = 'fabrice-alesia-' + Math.random().toString(36).substr(2, 6);
                 setCurrentUser(userName);
-                setRoomId(newRoomId);
-                
-                // Save to localStorage for offline support
                 localStorage.setItem('currentUser', userName);
-                localStorage.setItem('roomId', newRoomId);
-                localStorage.setItem('budget_setup_complete', 'true');
-                
-                // Create room in Supabase
-                await supabase.createRoom({
-                    room_id: newRoomId,
-                    created_by: userName
-                });
-                
+                localStorage.setItem('roomId', roomId);
                 setShowUserSetup(false);
-                setIsConnected(true);
-                startRealtimeSync(newRoomId);
-            };
-
-            // Real-time sync with Supabase
-            const startRealtimeSync = (roomId) => {
-                const syncInterval = setInterval(async () => {
-                    await syncWithSupabase(roomId);
-                    checkCollaboratorStatus();
-                }, 5000); // Sync every 5 seconds
                 
-                return () => clearInterval(syncInterval);
+                // Start simple sync
+                setInterval(() => syncData(roomId), 5000);
             };
 
-            const syncWithSupabase = async (roomId) => {
-                try {
-                    // Load all transactions from Supabase
-                    const transactions = await supabase.loadTransactions(roomId);
-                    
-                    if (transactions && transactions.length > 0) {
-                        // Separate income and expenses
-                        const incomeTransactions = transactions
-                            .filter(t => t.transaction_type === 'income')
-                            .map(t => ({
-                                id: t.id,
-                                description: t.description,
-                                amount: parseFloat(t.amount),
-                                category: t.category,
-                                date: t.date,
-                                addedBy: t.added_by,
-                                timestamp: new Date(t.created_at).getTime(),
-                                syncedFromPartner: t.added_by !== currentUser
-                            }));
-                        
-                        const expenseTransactions = transactions
-                            .filter(t => t.transaction_type === 'expense')
-                            .map(t => ({
-                                id: t.id,
-                                description: t.description,
-                                amount: parseFloat(t.amount),
-                                category: t.category,
-                                date: t.date,
-                                addedBy: t.added_by,
-                                timestamp: new Date(t.created_at).getTime(),
-                                syncedFromPartner: t.added_by !== currentUser
-                            }));
-                        
-                        setIncome(incomeTransactions);
-                        setExpenses(expenseTransactions);
-                        setCollaboratorOnline(true);
+            // Simple Sync with localStorage
+            const syncData = (roomId) => {
+                const cloudKey = `budget_${roomId}`;
+                const cloudData = localStorage.getItem(cloudKey);
+                
+                if (cloudData) {
+                    const parsed = JSON.parse(cloudData);
+                    if (parsed.user !== currentUser && parsed.lastUpdate > Date.now() - 30000) {
+                        setIncome(prev => [...prev, ...parsed.income.filter(t => !prev.some(p => p.id === t.id))]);
+                        setExpenses(prev => [...prev, ...parsed.expenses.filter(t => !prev.some(p => p.id === t.id))]);
                     }
-                } catch (error) {
-                    console.error('Sync error:', error);
-                    setIsConnected(false);
-                    // Fallback to localStorage
-                    loadFromLocalStorage();
                 }
-            };
-
-            const loadFromLocalStorage = () => {
-                const savedIncome = localStorage.getItem('budgetIncome');
-                const savedExpenses = localStorage.getItem('budgetExpenses');
-                if (savedIncome) setIncome(JSON.parse(savedIncome));
-                if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-            };
-
-            const checkCollaboratorStatus = () => {
-                // Check if there are recent transactions from partner
-                const recentTransactions = [...income, ...expenses].filter(t => 
-                    t.addedBy !== currentUser && 
-                    Date.now() - t.timestamp < 30000 // Within 30 seconds
-                );
-                setCollaboratorOnline(recentTransactions.length > 0);
-            };
-
-            // Initialize app
-            useEffect(() => {
-                const savedUser = localStorage.getItem('currentUser');
-                const savedRoomId = localStorage.getItem('roomId');
-                const setupComplete = localStorage.getItem('budget_setup_complete');
                 
-                if (setupComplete && savedUser && savedRoomId) {
-                    setCurrentUser(savedUser);
-                    setRoomId(savedRoomId);
-                    setShowUserSetup(false);
-                    setIsConnected(true);
-                    startRealtimeSync(savedRoomId);
-                }
+                localStorage.setItem(cloudKey, JSON.stringify({
+                    income, expenses, user: currentUser, lastUpdate: Date.now()
+                }));
+            };
 
-                // Load from localStorage as backup
-                loadFromLocalStorage();
-                
-                const savedIncomeCategories = localStorage.getItem('customIncomeCategories');
-                const savedExpenseCategories = localStorage.getItem('customExpenseCategories');
-                if (savedIncomeCategories) setCustomIncomeCategories(JSON.parse(savedIncomeCategories));
-                if (savedExpenseCategories) setCustomExpenseCategories(JSON.parse(savedExpenseCategories));
-            }, []);
-
-            // Save to localStorage as backup
-            useEffect(() => { 
-                if (!showAddModal && income.length > 0) {
-                    localStorage.setItem('budgetIncome', JSON.stringify(income)); 
-                }
-            }, [income, showAddModal]);
-            
-            useEffect(() => { 
-                if (!showAddModal && expenses.length > 0) {
-                    localStorage.setItem('budgetExpenses', JSON.stringify(expenses)); 
-                }
-            }, [expenses, showAddModal]);
-
-            // Handle transaction save to Supabase
-            const handleTransactionSave = async (transactionData) => {
+            // Add Transaction
+            const addTransaction = (type, description, amount, category, date) => {
                 const transaction = {
-                    room_id: roomId,
-                    user_name: currentUser,
-                    description: transactionData.description,
-                    amount: parseFloat(transactionData.amount),
-                    category: transactionData.category,
-                    transaction_type: transactionData.type,
-                    date: transactionData.date,
-                    added_by: currentUser
+                    id: Date.now() + Math.random(),
+                    description, amount: parseFloat(amount), category, date,
+                    addedBy: currentUser, timestamp: Date.now()
                 };
                 
-                // Save to Supabase
-                const savedTransaction = await supabase.saveTransaction(transaction);
-                
-                if (savedTransaction && savedTransaction.length > 0) {
-                    const newTransaction = {
-                        id: savedTransaction[0].id,
-                        description: transaction.description,
-                        amount: transaction.amount,
-                        category: transaction.category,
-                        date: transaction.date,
-                        addedBy: currentUser,
-                        timestamp: Date.now()
-                    };
-                    
-                    if (transactionData.type === 'income') {
-                        setIncome(prev => [newTransaction, ...prev]);
-                    } else {
-                        setExpenses(prev => [newTransaction, ...prev]);
-                    }
+                if (type === 'income') {
+                    setIncome(prev => [transaction, ...prev]);
                 } else {
-                    // Fallback to local storage if Supabase fails
-                    const localTransaction = {
-                        id: Date.now() + Math.random(),
-                        description: transactionData.description,
-                        amount: parseFloat(transactionData.amount),
-                        category: transactionData.category,
-                        date: transactionData.date,
-                        addedBy: currentUser,
-                        timestamp: Date.now()
-                    };
-                    
-                    if (transactionData.type === 'income') {
-                        setIncome(prev => [localTransaction, ...prev]);
-                    } else {
-                        setExpenses(prev => [localTransaction, ...prev]);
-                    }
+                    setExpenses(prev => [transaction, ...prev]);
                 }
             };
 
-            // Calculate metrics
+            // Calculate Metrics
             const now = new Date();
             const startOfYear = new Date(now.getFullYear(), 0, 1);
             const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-            const next90Days = new Date(now.getTime() + (90 * 24 * 60 * 60 * 1000));
+
+            const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
+            const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
+            const currentNet = totalIncome - totalExpenses;
 
             const ytdIncome = income.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + t.amount, 0);
             const ytdExpenses = expenses.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + t.amount, 0);
@@ -345,594 +112,268 @@
             const mtdExpenses = expenses.filter(t => new Date(t.date) >= startOfMonth).reduce((sum, t) => sum + t.amount, 0);
             const mtdNet = mtdIncome - mtdExpenses;
 
-            const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
-            const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
-            const currentNet = totalIncome - totalExpenses;
+            // Load saved data on startup
+            useEffect(() => {
+                const savedUser = localStorage.getItem('currentUser');
+                const savedIncome = localStorage.getItem('budgetIncome');
+                const savedExpenses = localStorage.getItem('budgetExpenses');
+                
+                if (savedUser) {
+                    setCurrentUser(savedUser);
+                    setShowUserSetup(false);
+                }
+                if (savedIncome) setIncome(JSON.parse(savedIncome));
+                if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
+            }, []);
 
-            const forecast90Income = plannedTransactions.filter(t => 
-                t.type === 'income' && !t.completed && 
-                new Date(t.date) >= now && new Date(t.date) <= next90Days
-            ).reduce((sum, t) => sum + t.amount, 0);
+            // Save data when changed
+            useEffect(() => {
+                if (income.length > 0) localStorage.setItem('budgetIncome', JSON.stringify(income));
+            }, [income]);
+            
+            useEffect(() => {
+                if (expenses.length > 0) localStorage.setItem('budgetExpenses', JSON.stringify(expenses));
+            }, [expenses]);
 
-            const forecast90Expenses = plannedTransactions.filter(t => 
-                t.type === 'expense' && !t.completed && 
-                new Date(t.date) >= now && new Date(t.date) <= next90Days
-            ).reduce((sum, t) => sum + t.amount, 0);
+            // User Setup Screen
+            if (showUserSetup) {
+                return e('div', { className: 'min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6' },
+                    e('div', { className: 'bg-white rounded-2xl shadow-xl p-8 max-w-md w-full' }, [
+                        e('div', { key: 'header', className: 'text-center mb-8' }, [
+                            e('div', { key: 'icon', className: 'mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4' },
+                                e('span', { className: 'text-white text-2xl font-bold' }, '💰')
+                            ),
+                            e('h1', { key: 'title', className: 'text-2xl font-bold text-gray-800 mb-2' }, 'Family Budget Login'),
+                            e('p', { key: 'subtitle', className: 'text-gray-600' }, 'Choose your identity to track transactions')
+                        ]),
+                        e('div', { key: 'buttons', className: 'space-y-4' }, [
+                            e('button', {
+                                key: 'fabrice',
+                                onClick: () => setupUser('Fabrice'),
+                                className: 'w-full p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-lg font-semibold'
+                            }, '👤 Login as Fabrice'),
+                            e('button', {
+                                key: 'alesia',
+                                onClick: () => setupUser('Alesia'),
+                                className: 'w-full p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-lg font-semibold'
+                            }, '👤 Login as Alesia')
+                        ])
+                    ])
+                );
+            }
 
-            const forecast90Net = forecast90Income - forecast90Expenses;
-
-            // Transaction Modal Component
-            const TransactionModal = ({ isOpen, selectedDate, onClose, onSave }) => {
+            // Transaction Modal
+            const TransactionModal = () => {
                 const [formData, setFormData] = useState({
-                    description: '',
-                    amount: '',
-                    category: expenseCategories[0],
-                    type: 'expense'
+                    description: '', amount: '', category: expenseCategories[0], type: 'expense'
                 });
 
-                useEffect(() => {
-                    if (isOpen) {
-                        setFormData({
-                            description: '',
-                            amount: '',
-                            category: expenseCategories[0],
-                            type: 'expense'
-                        });
-                    }
-                }, [isOpen]);
+                if (!showAddModal) return null;
 
-                const handleSave = async () => {
-                    if (formData.description && formData.amount) {
-                        await onSave({
-                            ...formData,
-                            date: selectedDate ? formatDateForInput(selectedDate) : new Date().toISOString().split('T')[0]
-                        });
-                        onClose();
-                    }
-                };
-
-                const handleTypeChange = (newType) => {
-                    setFormData(prev => ({
-                        ...prev,
-                        type: newType,
-                        category: newType === 'income' ? incomeCategories[0] : expenseCategories[0]
-                    }));
-                };
-
-                if (!isOpen) return null;
-
-                return React.createElement('div', {
-                    className: "fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4",
-                    onClick: onClose
-                }, React.createElement('div', {
-                    className: "bg-white rounded-lg shadow-xl max-w-md w-full p-6",
-                    onClick: (e) => e.stopPropagation()
+                return e('div', {
+                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4',
+                    onClick: () => setShowAddModal(false)
+                }, e('div', {
+                    className: 'bg-white rounded-lg shadow-xl max-w-md w-full p-6',
+                    onClick: e => e.stopPropagation()
                 }, [
-                    React.createElement('h3', {
-                        key: 'title',
-                        className: "text-lg font-semibold mb-4 text-gray-800"
-                    }, `Add Transaction for ${selectedDate?.toLocaleDateString()}`),
-                    
-                    React.createElement('div', {
-                        key: 'form',
-                        className: "space-y-4"
-                    }, [
-                        React.createElement('input', {
-                            key: 'description',
-                            type: "text",
-                            placeholder: "Description (e.g., Jacques rent, groceries)",
+                    e('h3', { key: 'title', className: 'text-lg font-semibold mb-4' }, 
+                        `Add Transaction for ${selectedDate?.toLocaleDateString()}`
+                    ),
+                    e('div', { key: 'form', className: 'space-y-4' }, [
+                        e('input', {
+                            key: 'desc',
+                            type: 'text',
+                            placeholder: 'Description (e.g., Jacques rent, groceries)',
                             value: formData.description,
-                            onChange: (e) => setFormData(prev => ({...prev, description: e.target.value})),
-                            className: "w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500",
-                            autoFocus: true
+                            onChange: e => setFormData({...formData, description: e.target.value}),
+                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }),
-                        
-                        React.createElement('input', {
+                        e('input', {
                             key: 'amount',
-                            type: "number",
-                            placeholder: "Amount",
-                            step: "0.01",
+                            type: 'number',
+                            placeholder: 'Amount',
+                            step: '0.01',
                             value: formData.amount,
-                            onChange: (e) => setFormData(prev => ({...prev, amount: e.target.value})),
-                            className: "w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange: e => setFormData({...formData, amount: e.target.value}),
+                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }),
-                        
-                        React.createElement('select', {
+                        e('select', {
                             key: 'type',
                             value: formData.type,
-                            onChange: (e) => handleTypeChange(e.target.value),
-                            className: "w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            onChange: e => setFormData({
+                                ...formData, 
+                                type: e.target.value,
+                                category: e.target.value === 'income' ? incomeCategories[0] : expenseCategories[0]
+                            }),
+                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
                         }, [
-                            React.createElement('option', { key: 'expense', value: 'expense' }, '💸 Expense'),
-                            React.createElement('option', { key: 'income', value: 'income' }, '💰 Income')
+                            e('option', { key: 'expense', value: 'expense' }, '💸 Expense'),
+                            e('option', { key: 'income', value: 'income' }, '💰 Income')
                         ]),
-                        
-                        React.createElement('select', {
+                        e('select', {
                             key: 'category',
                             value: formData.category,
-                            onChange: (e) => setFormData(prev => ({...prev, category: e.target.value})),
-                            className: "w-full p-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        }, (formData.type === 'income' ? incomeCategories : expenseCategories).map(category => 
-                            React.createElement('option', { key: category, value: category }, category)
+                            onChange: e => setFormData({...formData, category: e.target.value}),
+                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
+                        }, (formData.type === 'income' ? incomeCategories : expenseCategories).map(cat =>
+                            e('option', { key: cat, value: cat }, cat)
                         )),
-                        
-                        React.createElement('div', {
-                            key: 'buttons',
-                            className: "flex gap-3 pt-2"
-                        }, [
-                            React.createElement('button', {
+                        e('div', { key: 'buttons', className: 'flex gap-3 pt-2' }, [
+                            e('button', {
                                 key: 'save',
-                                onClick: handleSave,
+                                onClick: () => {
+                                    if (formData.description && formData.amount) {
+                                        addTransaction(formData.type, formData.description, formData.amount, formData.category, formatDate(selectedDate));
+                                        setShowAddModal(false);
+                                        setFormData({ description: '', amount: '', category: expenseCategories[0], type: 'expense' });
+                                    }
+                                },
                                 disabled: !formData.description || !formData.amount,
-                                className: "flex-1 bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 transition disabled:bg-gray-400 flex items-center justify-center"
-                            }, [
-                                React.createElement(PlusCircle, { key: 'icon', className: "mr-2 h-4 w-4" }),
-                                'Add Transaction'
-                            ]),
-                            React.createElement('button', {
+                                className: 'flex-1 bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 disabled:bg-gray-400'
+                            }, '➕ Add Transaction'),
+                            e('button', {
                                 key: 'cancel',
-                                onClick: onClose,
-                                className: "flex-1 bg-gray-300 text-gray-700 p-3 rounded-md hover:bg-gray-400 transition"
+                                onClick: () => setShowAddModal(false),
+                                className: 'flex-1 bg-gray-300 text-gray-700 p-3 rounded-md hover:bg-gray-400'
                             }, 'Cancel')
                         ])
                     ])
                 ]));
             };
 
-            // User Setup Screen
-            if (showUserSetup) {
-                return React.createElement('div', {
-                    className: "min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6"
-                }, React.createElement('div', {
-                    className: "bg-white rounded-2xl shadow-xl p-8 max-w-md w-full"
-                }, [
-                    React.createElement('div', {
-                        key: 'header',
-                        className: "text-center mb-8"
-                    }, [
-                        React.createElement(Users, {
-                            key: 'icon',
-                            className: "mx-auto h-16 w-16 text-blue-600 mb-4"
-                        }),
-                        React.createElement('h1', {
-                            key: 'title',
-                            className: "text-2xl font-bold text-gray-800 mb-2"
-                        }, 'Family Budget Login'),
-                        React.createElement('p', {
-                            key: 'subtitle',
-                            className: "text-gray-600"
-                        }, 'Choose your identity to track transactions')
-                    ]),
-                    
-                    React.createElement('div', {
-                        key: 'buttons',
-                        className: "space-y-4"
-                    }, [
-                        React.createElement('button', {
-                            key: 'fabrice',
-                            onClick: () => setupUser('Fabrice'),
-                            className: "w-full p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition flex items-center justify-center text-lg font-semibold"
-                        }, [
-                            React.createElement(User, { key: 'icon', className: "mr-3 h-5 w-5" }),
-                            'Login as Fabrice'
-                        ]),
-                        
-                        React.createElement('button', {
-                            key: 'alesia',
-                            onClick: () => setupUser('Alesia'),
-                            className: "w-full p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition flex items-center justify-center text-lg font-semibold"
-                        }, [
-                            React.createElement(User, { key: 'icon', className: "mr-3 h-5 w-5" }),
-                            'Login as Alesia'
-                        ])
-                    ]),
-                    
-                    React.createElement('div', {
-                        key: 'info',
-                        className: "mt-8 p-4 bg-green-50 rounded-lg border border-green-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "font-semibold text-green-800 mb-2"
-                        }, '🚀 Production Ready:'),
-                        React.createElement('ul', {
-                            key: 'features',
-                            className: "text-sm text-green-700 space-y-1"
-                        }, [
-                            React.createElement('li', { key: '1' }, '• Real-time sync with Supabase'),
-                            React.createElement('li', { key: '2' }, '• Works offline with localStorage backup'),
-                            React.createElement('li', { key: '3' }, '• Mobile responsive design'),
-                            React.createElement('li', { key: '4' }, '• Track rental income & family expenses')
-                        ])
-                    ])
-                ]));
-            }
-
-            // Connection Status
-            const ConnectionStatus = () => React.createElement('div', {
-                className: "bg-white shadow-sm p-3 mb-4 rounded-lg"
-            }, React.createElement('div', {
-                className: "flex items-center justify-between"
-            }, React.createElement('div', {
-                className: "flex items-center gap-3"
-            }, [
-                React.createElement('div', {
-                    key: 'status',
-                    className: "flex items-center gap-2"
-                }, [
-                    React.createElement(isConnected ? Wifi : WifiOff, {
-                        key: 'icon',
-                        className: `h-4 w-4 ${isConnected ? 'text-green-600' : 'text-red-600'}`
-                    }),
-                    React.createElement('span', {
-                        key: 'text',
-                        className: `text-sm font-medium ${isConnected ? 'text-green-600' : 'text-red-600'}`
-                    }, isConnected ? 'Connected' : 'Offline')
-                ]),
-                
-                React.createElement('div', {
-                    key: 'user',
-                    className: "flex items-center gap-2"
-                }, [
-                    React.createElement(User, {
-                        key: 'icon',
-                        className: "h-4 w-4 text-gray-600"
-                    }),
-                    React.createElement('span', {
-                        key: 'name',
-                        className: `text-sm px-2 py-1 rounded-full font-medium ${getUserColor(currentUser)}`
-                    }, currentUser)
-                ]),
-                
-                React.createElement('div', {
-                    key: 'partner',
-                    className: "flex items-center gap-2"
-                }, [
-                    React.createElement('div', {
-                        key: 'dot',
-                        className: `h-2 w-2 rounded-full ${collaboratorOnline ? 'bg-green-500' : 'bg-gray-400'}`
-                    }),
-                    React.createElement('span', {
-                        key: 'status',
-                        className: "text-xs text-gray-600"
-                    }, collaboratorOnline ? (currentUser === 'Fabrice' ? 'Alesia online' : 'Fabrice online') : 'Partner offline')
-                ])
-            ])));
-
             // Navigation
-            const Navigation = () => React.createElement('nav', {
-                className: "bg-white shadow-md p-4 mb-6 rounded-lg"
-            }, React.createElement('div', {
-                className: "flex flex-wrap gap-4 justify-center"
-            }, [
-                React.createElement('button', {
-                    key: 'dashboard',
-                    onClick: () => setCurrentScreen('dashboard'),
-                    className: `flex items-center px-4 py-2 rounded-lg transition ${
-                        currentScreen === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`
-                }, [
-                    React.createElement(Home, { key: 'icon', className: "mr-2 h-4 w-4" }),
-                    'Dashboard'
-                ]),
-                React.createElement('button', {
-                    key: 'calendar',
-                    onClick: () => setCurrentScreen('calendar'),
-                    className: `flex items-center px-4 py-2 rounded-lg transition ${
-                        currentScreen === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`
-                }, [
-                    React.createElement(Calendar, { key: 'icon', className: "mr-2 h-4 w-4" }),
-                    'Calendar'
-                ]),
-                React.createElement('button', {
-                    key: 'settings',
-                    onClick: () => setCurrentScreen('settings'),
-                    className: `flex items-center px-4 py-2 rounded-lg transition ${
-                        currentScreen === 'settings' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                    }`
-                }, [
-                    React.createElement(Settings, { key: 'icon', className: "mr-2 h-4 w-4" }),
-                    'Settings'
+            const Navigation = () => e('nav', { className: 'bg-white shadow-md p-4 mb-6 rounded-lg' },
+                e('div', { className: 'flex flex-wrap gap-4 justify-center' }, [
+                    e('button', {
+                        key: 'dashboard',
+                        onClick: () => setCurrentScreen('dashboard'),
+                        className: `px-4 py-2 rounded-lg transition ${currentScreen === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
+                    }, '🏠 Dashboard'),
+                    e('button', {
+                        key: 'calendar',
+                        onClick: () => setCurrentScreen('calendar'),
+                        className: `px-4 py-2 rounded-lg transition ${currentScreen === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
+                    }, '📅 Calendar')
                 ])
-            ]));
+            );
 
-            // Simplified Dashboard for production
-            const DashboardScreen = () => React.createElement('div', {}, [
-                // Key Metrics
-                React.createElement('div', {
-                    key: 'metrics',
-                    className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8"
-                }, [
-                    // YTD Section
-                    React.createElement('div', {
-                        key: 'ytd',
-                        className: "bg-blue-50 p-6 rounded-lg shadow-md border border-blue-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "text-lg font-semibold text-blue-800 mb-3"
-                        }, 'Year to Date'),
-                        React.createElement('div', {
-                            key: 'content',
-                            className: "space-y-2"
-                        }, [
-                            React.createElement('div', {
-                                key: 'revenue',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-blue-600"
-                                }, 'Revenue:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-green-600"
-                                }, `$${ytdIncome.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'expenses',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-blue-600"
-                                }, 'Expenses:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-red-600"
-                                }, `$${ytdExpenses.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'net',
-                                className: "flex justify-between border-t pt-2"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "font-semibold text-blue-800"
-                                }, 'Net:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: `font-bold ${ytdNet >= 0 ? 'text-blue-600' : 'text-orange-600'}`
-                                }, `$${ytdNet.toFixed(2)}`)
-                            ])
+            // Dashboard
+            const Dashboard = () => e('div', {}, [
+                // Metrics Cards
+                e('div', { key: 'metrics', className: 'grid grid-cols-1 md:grid-cols-4 gap-6 mb-8' }, [
+                    e('div', { key: 'ytd', className: 'bg-blue-50 p-6 rounded-lg shadow-md border border-blue-200' }, [
+                        e('h3', { key: 'title', className: 'text-lg font-semibold text-blue-800 mb-3' }, 'Year to Date'),
+                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-blue-600' }, 'Revenue:'),
+                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${ytdIncome.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-blue-600' }, 'Expenses:'),
+                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${ytdExpenses.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
+                            e('span', { key: 'label', className: 'font-semibold text-blue-800' }, 'Net:'),
+                            e('span', { 
+                                key: 'value', 
+                                className: `font-bold ${ytdNet >= 0 ? 'text-blue-600' : 'text-orange-600'}`
+                            }, `$${ytdNet.toFixed(2)}`)
+                        ])
+                    ]),
+                    
+                    e('div', { key: 'mtd', className: 'bg-green-50 p-6 rounded-lg shadow-md border border-green-200' }, [
+                        e('h3', { key: 'title', className: 'text-lg font-semibold text-green-800 mb-3' }, 'Month to Date'),
+                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-green-600' }, 'Revenue:'),
+                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${mtdIncome.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-green-600' }, 'Expenses:'),
+                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${mtdExpenses.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
+                            e('span', { key: 'label', className: 'font-semibold text-green-800' }, 'Net:'),
+                            e('span', { 
+                                key: 'value', 
+                                className: `font-bold ${mtdNet >= 0 ? 'text-green-600' : 'text-orange-600'}`
+                            }, `$${mtdNet.toFixed(2)}`)
                         ])
                     ]),
 
-                    // MTD Section
-                    React.createElement('div', {
-                        key: 'mtd',
-                        className: "bg-green-50 p-6 rounded-lg shadow-md border border-green-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "text-lg font-semibold text-green-800 mb-3"
-                        }, 'Month to Date'),
-                        React.createElement('div', {
-                            key: 'content',
-                            className: "space-y-2"
-                        }, [
-                            React.createElement('div', {
-                                key: 'revenue',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-green-600"
-                                }, 'Revenue:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-green-600"
-                                }, `$${mtdIncome.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'expenses',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-green-600"
-                                }, 'Expenses:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-red-600"
-                                }, `$${mtdExpenses.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'net',
-                                className: "flex justify-between border-t pt-2"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "font-semibold text-green-800"
-                                }, 'Net:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: `font-bold ${mtdNet >= 0 ? 'text-green-600' : 'text-orange-600'}`
-                                }, `$${mtdNet.toFixed(2)}`)
-                            ])
+                    e('div', { key: 'current', className: 'bg-purple-50 p-6 rounded-lg shadow-md border border-purple-200' }, [
+                        e('h3', { key: 'title', className: 'text-lg font-semibold text-purple-800 mb-3' }, 'Current Position'),
+                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-purple-600' }, 'Total Revenue:'),
+                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${totalIncome.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-purple-600' }, 'Total Expenses:'),
+                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${totalExpenses.toFixed(2)}`)
+                        ]),
+                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
+                            e('span', { key: 'label', className: 'font-semibold text-purple-800' }, 'Net:'),
+                            e('span', { 
+                                key: 'value', 
+                                className: `font-bold ${currentNet >= 0 ? 'text-purple-600' : 'text-orange-600'}`
+                            }, `$${currentNet.toFixed(2)}`)
                         ])
                     ]),
 
-                    // Current Position
-                    React.createElement('div', {
-                        key: 'current',
-                        className: "bg-purple-50 p-6 rounded-lg shadow-md border border-purple-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "text-lg font-semibold text-purple-800 mb-3"
-                        }, 'Current Position'),
-                        React.createElement('div', {
-                            key: 'content',
-                            className: "space-y-2"
-                        }, [
-                            React.createElement('div', {
-                                key: 'revenue',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-purple-600"
-                                }, 'Total Revenue:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-green-600"
-                                }, `$${totalIncome.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'expenses',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-purple-600"
-                                }, 'Total Expenses:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-red-600"
-                                }, `$${totalExpenses.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'net',
-                                className: "flex justify-between border-t pt-2"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "font-semibold text-purple-800"
-                                }, 'Net:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: `font-bold ${currentNet >= 0 ? 'text-purple-600' : 'text-orange-600'}`
-                                }, `$${currentNet.toFixed(2)}`)
-                            ])
-                        ])
-                    ]),
-
-                    // 90 Day Forecast
-                    React.createElement('div', {
-                        key: 'forecast',
-                        className: "bg-orange-50 p-6 rounded-lg shadow-md border border-orange-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "text-lg font-semibold text-orange-800 mb-3"
-                        }, '90 Day Forecast'),
-                        React.createElement('div', {
-                            key: 'content',
-                            className: "space-y-2"
-                        }, [
-                            React.createElement('div', {
-                                key: 'revenue',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-orange-600"
-                                }, 'Planned Revenue:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-green-600"
-                                }, `$${forecast90Income.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'expenses',
-                                className: "flex justify-between"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "text-sm text-orange-600"
-                                }, 'Planned Expenses:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: "font-bold text-red-600"
-                                }, `$${forecast90Expenses.toFixed(2)}`)
-                            ]),
-                            React.createElement('div', {
-                                key: 'net',
-                                className: "flex justify-between border-t pt-2"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'label',
-                                    className: "font-semibold text-orange-800"
-                                }, 'Forecast Net:'),
-                                React.createElement('span', {
-                                    key: 'value',
-                                    className: `font-bold ${forecast90Net >= 0 ? 'text-orange-600' : 'text-red-600'}`
-                                }, `$${forecast90Net.toFixed(2)}`)
-                            ])
+                    e('div', { key: 'info', className: 'bg-orange-50 p-6 rounded-lg shadow-md border border-orange-200' }, [
+                        e('h3', { key: 'title', className: 'text-lg font-semibold text-orange-800 mb-3' }, 'Status'),
+                        e('div', { key: 'user', className: 'mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-orange-600' }, 'User: '),
+                            e('span', { key: 'value', className: `text-sm px-2 py-1 rounded ${getUserColor(currentUser)}` }, currentUser)
+                        ]),
+                        e('div', { key: 'transactions', className: 'mb-2' }, [
+                            e('span', { key: 'label', className: 'text-sm text-orange-600' }, 'Transactions: '),
+                            e('span', { key: 'value', className: 'font-bold text-orange-800' }, income.length + expenses.length)
                         ])
                     ])
                 ]),
 
                 // Recent Activity
-                React.createElement('div', {
-                    key: 'activity',
-                    className: "bg-white rounded-lg shadow-md p-6"
-                }, [
-                    React.createElement('h2', {
-                        key: 'title',
-                        className: "text-xl font-semibold text-gray-800 mb-4"
-                    }, 'Recent Activity'),
-                    React.createElement('div', {
-                        key: 'list',
-                        className: "space-y-3"
-                    }, [...income, ...expenses]
-                        .sort((a, b) => b.timestamp - a.timestamp)
-                        .slice(0, 10)
-                        .map(transaction => React.createElement('div', {
-                            key: transaction.id,
-                            className: `flex items-center justify-between p-3 rounded-lg ${
-                                transaction.syncedFromPartner ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'
-                            }`
-                        }, [
-                            React.createElement('div', {
-                                key: 'info',
-                                className: "flex items-center gap-3"
-                            }, [
-                                React.createElement('span', {
-                                    key: 'user',
-                                    className: `text-xs px-2 py-1 rounded-full font-medium ${getUserColor(transaction.addedBy)}`
-                                }, transaction.addedBy),
-                                transaction.syncedFromPartner && React.createElement('span', {
-                                    key: 'sync',
-                                    className: "text-xs text-yellow-600 font-medium"
-                                }, '✨ Just synced!'),
-                                React.createElement('div', {
-                                    key: 'details'
+                e('div', { key: 'activity', className: 'bg-white rounded-lg shadow-md p-6' }, [
+                    e('h2', { key: 'title', className: 'text-xl font-semibold text-gray-800 mb-4' }, 'Recent Activity'),
+                    e('div', { key: 'list', className: 'space-y-3' },
+                        [...income, ...expenses]
+                            .sort((a, b) => b.timestamp - a.timestamp)
+                            .slice(0, 10)
+                            .map(transaction =>
+                                e('div', {
+                                    key: transaction.id,
+                                    className: 'flex items-center justify-between p-3 bg-gray-50 rounded-lg'
                                 }, [
-                                    React.createElement('div', {
-                                        key: 'description',
-                                        className: "font-semibold text-gray-800"
-                                    }, transaction.description),
-                                    React.createElement('div', {
-                                        key: 'meta',
-                                        className: "text-sm text-gray-600"
-                                    }, `${transaction.category} • ${new Date(transaction.date).toLocaleDateString()}`)
+                                    e('div', { key: 'info', className: 'flex items-center gap-3' }, [
+                                        e('span', {
+                                            key: 'user',
+                                            className: `text-xs px-2 py-1 rounded-full font-medium ${getUserColor(transaction.addedBy)}`
+                                        }, transaction.addedBy),
+                                        e('div', { key: 'details' }, [
+                                            e('div', { key: 'desc', className: 'font-semibold text-gray-800' }, transaction.description),
+                                            e('div', { key: 'meta', className: 'text-sm text-gray-600' }, 
+                                                `${transaction.category} • ${new Date(transaction.date).toLocaleDateString()}`
+                                            )
+                                        ])
+                                    ]),
+                                    e('span', {
+                                        key: 'amount',
+                                        className: `font-bold ${income.includes(transaction) ? 'text-green-600' : 'text-red-600'}`
+                                    }, `${income.includes(transaction) ? '+' : '-'}$${transaction.amount.toFixed(2)}`)
                                 ])
-                            ]),
-                            React.createElement('span', {
-                                key: 'amount',
-                                className: `font-bold ${income.includes(transaction) ? 'text-green-600' : 'text-red-600'}`
-                            }, `${income.includes(transaction) ? '+' : '-'}$${transaction.amount.toFixed(2)}`)
-                        ])))
+                            )
+                    )
                 ])
             ]);
 
-            // Calendar Screen with simplified rendering
-            const CalendarScreen = () => {
+            // Calendar
+            const Calendar = () => {
                 const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
                 const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
 
-                const getTransactionsForDate = (date) => {
-                    const dateStr = formatDateForInput(date);
-                    return [...income, ...expenses].filter(t => t.date === dateStr);
-                };
-
-                const handleDateClick = (day, event) => {
-                    event.preventDefault();
+                const handleDateClick = (day) => {
                     const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                    setCalendarSelectedDate(clickedDate);
+                    setSelectedDate(clickedDate);
                     setShowAddModal(true);
                 };
 
@@ -940,215 +381,86 @@
                     setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1));
                 };
 
-                const closeModal = () => {
-                    setShowAddModal(false);
-                    setCalendarSelectedDate(null);
-                };
-
-                return React.createElement('div', { className: "space-y-6" }, [
-                    React.createElement('div', {
-                        key: 'calendar',
-                        className: "bg-white rounded-lg shadow-md p-6"
-                    }, [
-                        React.createElement('div', {
-                            key: 'header',
-                            className: "flex items-center justify-between mb-6"
-                        }, [
-                            React.createElement('h2', {
-                                key: 'title',
-                                className: "text-2xl font-semibold text-gray-800"
-                            }, currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })),
-                            React.createElement('div', {
-                                key: 'nav',
-                                className: "flex gap-2"
-                            }, [
-                                React.createElement('button', {
-                                    key: 'prev',
-                                    onClick: () => navigateMonth(-1),
-                                    className: "px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                                }, '← Previous'),
-                                React.createElement('button', {
-                                    key: 'today',
-                                    onClick: () => setCurrentMonth(new Date()),
-                                    className: "px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition"
-                                }, 'Today'),
-                                React.createElement('button', {
-                                    key: 'next',
-                                    onClick: () => navigateMonth(1),
-                                    className: "px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition"
-                                }, 'Next →')
-                            ])
-                        ]),
-
-                        React.createElement('div', {
-                            key: 'instructions',
-                            className: "mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200"
-                        }, React.createElement('p', {
-                            className: "text-sm text-blue-800"
-                        }, '💡 Click any date to add transactions - All income and expense entry happens here!')),
-
-                        React.createElement('div', {
-                            key: 'grid',
-                            className: "grid grid-cols-7 gap-1"
-                        }, [
-                            // Day headers
-                            ...['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => 
-                                React.createElement('div', {
-                                    key: day,
-                                    className: "h-10 flex items-center justify-center font-semibold text-gray-700 bg-gray-100 rounded"
-                                }, day)
-                            ),
-                            // Calendar days (simplified for production)
-                            ...Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) => 
-                                React.createElement('div', {
-                                    key: `empty-${i}`,
-                                    className: "h-24 border border-gray-200 bg-gray-50"
-                                })
-                            ),
-                            ...Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
-                                const day = i + 1;
-                                const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                                const transactions = getTransactionsForDate(date);
-                                const isToday = new Date().toDateString() === date.toDateString();
-                                
-                                return React.createElement('button', {
-                                    key: day,
-                                    onClick: (e) => handleDateClick(day, e),
-                                    className: `h-24 border border-gray-200 cursor-pointer hover:bg-blue-50 transition p-1 text-left focus:outline-none focus:ring-2 focus:ring-blue-500 ${
-                                        isToday ? 'bg-blue-100 border-blue-300' : 'bg-white hover:shadow-md'
-                                    }`
-                                }, [
-                                    React.createElement('div', {
-                                        key: 'day',
-                                        className: `text-sm font-semibold mb-1 ${isToday ? 'text-blue-600' : 'text-gray-700'}`
-                                    }, day),
-                                    React.createElement('div', {
-                                        key: 'transactions',
-                                        className: "space-y-1"
-                                    }, [
-                                        ...transactions.slice(0, 2).map(transaction => 
-                                            React.createElement('div', {
-                                                key: transaction.id,
-                                                className: `text-xs p-1 rounded truncate ${
-                                                    income.includes(transaction)
-                                                        ? 'bg-green-100 text-green-800 border border-green-200' 
-                                                        : 'bg-red-100 text-red-800 border border-red-200'
-                                                }`
-                                            }, `$${transaction.amount} - ${transaction.description.slice(0, 8)}...`)
-                                        ),
-                                        transactions.length > 2 && React.createElement('div', {
-                                            key: 'more',
-                                            className: "text-xs text-gray-500 font-medium"
-                                        }, `+${transactions.length - 2} more`),
-                                        transactions.length === 0 && React.createElement('div', {
-                                            key: 'empty',
-                                            className: "text-xs text-gray-400 italic"
-                                        }, 'Click to add')
-                                    ])
-                                ]);
-                            })
+                return e('div', { className: 'bg-white rounded-lg shadow-md p-6' }, [
+                    e('div', { key: 'header', className: 'flex items-center justify-between mb-6' }, [
+                        e('h2', { key: 'title', className: 'text-2xl font-semibold text-gray-800' },
+                            currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+                        ),
+                        e('div', { key: 'nav', className: 'flex gap-2' }, [
+                            e('button', {
+                                key: 'prev',
+                                onClick: () => navigateMonth(-1),
+                                className: 'px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200'
+                            }, '← Previous'),
+                            e('button', {
+                                key: 'today',
+                                onClick: () => setCurrentMonth(new Date()),
+                                className: 'px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200'
+                            }, 'Today'),
+                            e('button', {
+                                key: 'next',
+                                onClick: () => navigateMonth(1),
+                                className: 'px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200'
+                            }, 'Next →')
                         ])
                     ]),
+                    
+                    e('div', { key: 'instructions', className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
+                        e('p', { className: 'text-sm text-blue-800' }, '💡 Click any date to add transactions!')
+                    ),
 
-                    // Transaction Modal
-                    React.createElement(TransactionModal, {
-                        key: 'modal',
-                        isOpen: showAddModal,
-                        selectedDate: calendarSelectedDate,
-                        onClose: closeModal,
-                        onSave: handleTransactionSave
-                    })
+                    e('div', { key: 'grid', className: 'grid grid-cols-7 gap-1' }, [
+                        // Day headers
+                        ...['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
+                            e('div', {
+                                key: day,
+                                className: 'h-10 flex items-center justify-center font-semibold text-gray-700 bg-gray-100 rounded'
+                            }, day)
+                        ),
+                        // Empty cells for days before month starts
+                        ...Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) =>
+                            e('div', { key: `empty-${i}`, className: 'h-20 border border-gray-200 bg-gray-50' })
+                        ),
+                        // Calendar days
+                        ...Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
+                            const day = i + 1;
+                            const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString();
+                            return e('button', {
+                                key: day,
+                                onClick: () => handleDateClick(day),
+                                className: `h-20 border border-gray-200 cursor-pointer hover:bg-blue-50 transition p-1 text-left ${
+                                    isToday ? 'bg-blue-100 border-blue-300' : 'bg-white'
+                                }`
+                            }, [
+                                e('div', {
+                                    key: 'day',
+                                    className: `text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`
+                                }, day),
+                                e('div', { key: 'hint', className: 'text-xs text-gray-400 mt-1' }, 'Click to add')
+                            ]);
+                        })
+                    ])
                 ]);
             };
 
-            // Simplified Settings for production
-            const SettingsScreen = () => React.createElement('div', {
-                className: "bg-white rounded-lg shadow-md p-6"
-            }, [
-                React.createElement('h2', {
-                    key: 'title',
-                    className: "text-2xl font-semibold text-gray-800 mb-4"
-                }, 'Settings'),
-                React.createElement('div', {
-                    key: 'info',
-                    className: "space-y-4"
-                }, [
-                    React.createElement('div', {
-                        key: 'status',
-                        className: "p-4 bg-green-50 rounded-lg border border-green-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "font-semibold text-green-800 mb-2"
-                        }, '✅ Production Status'),
-                        React.createElement('ul', {
-                            key: 'list',
-                            className: "text-sm text-green-700 space-y-1"
-                        }, [
-                            React.createElement('li', { key: '1' }, `• Connected as: ${currentUser}`),
-                            React.createElement('li', { key: '2' }, `• Room ID: ${roomId.slice(-8)}`),
-                            React.createElement('li', { key: '3' }, `• Database: ${isConnected ? 'Supabase Connected' : 'Offline Mode'}`),
-                            React.createElement('li', { key: '4' }, `• Partner: ${collaboratorOnline ? 'Online' : 'Offline'}`)
-                        ])
-                    ]),
-                    React.createElement('div', {
-                        key: 'sharing',
-                        className: "p-4 bg-blue-50 rounded-lg border border-blue-200"
-                    }, [
-                        React.createElement('h3', {
-                            key: 'title',
-                            className: "font-semibold text-blue-800 mb-2"
-                        }, '🔗 Share with Alesia'),
-                        React.createElement('p', {
-                            key: 'instruction',
-                            className: "text-sm text-blue-700"
-                        }, `Send this URL to your partner: ${window.location.href}`)
-                    ])
-                ])
-            ]);
-
-            return React.createElement('div', {
-                className: "max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen"
-            }, [
-                React.createElement('header', {
-                    key: 'header',
-                    className: "text-center mb-6"
-                }, [
-                    React.createElement('h1', {
-                        key: 'title',
-                        className: "text-3xl font-bold text-gray-800 mb-2"
-                    }, 'Fabrice & Alesia Budget'),
-                    React.createElement('p', {
-                        key: 'subtitle',
-                        className: "text-gray-600"
-                    }, 'Production-ready collaborative family budget tracker')
+            // Main App Render
+            return e('div', { className: 'max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen' }, [
+                e('header', { key: 'header', className: 'text-center mb-6' }, [
+                    e('h1', { key: 'title', className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Fabrice & Alesia Budget'),
+                    e('p', { key: 'subtitle', className: 'text-gray-600' }, 'Simple collaborative family budget tracker')
                 ]),
-
-                React.createElement(ConnectionStatus, { key: 'status' }),
-                React.createElement(Navigation, { key: 'nav' }),
-
-                currentScreen === 'dashboard' && React.createElement(DashboardScreen, { key: 'dashboard' }),
-                currentScreen === 'calendar' && React.createElement(CalendarScreen, { key: 'calendar' }),
-                currentScreen === 'settings' && React.createElement(SettingsScreen, { key: 'settings' })
+                
+                e(Navigation, { key: 'nav' }),
+                
+                currentScreen === 'dashboard' && e(Dashboard, { key: 'dashboard' }),
+                currentScreen === 'calendar' && e(Calendar, { key: 'calendar' }),
+                
+                e(TransactionModal, { key: 'modal' })
             ]);
         };
 
         // Render the app
-        ReactDOM.render(React.createElement(SimpleBudgetTracker), document.getElementById('root'));
-    </script>
-
-    <!-- Service Worker for offline support -->
-    <script>
-        if ('serviceWorker' in navigator) {
-            window.addEventListener('load', function() {
-                navigator.serviceWorker.register('data:text/javascript,console.log("SW loaded");')
-                    .then(function(registration) {
-                        console.log('ServiceWorker registration successful');
-                    }, function(err) {
-                        console.log('ServiceWorker registration failed: ', err);
-                    });
-            });
-        }
+        ReactDOM.render(React.createElement(BudgetApp), document.getElementById('root'));
     </script>
 </body>
 </html>
