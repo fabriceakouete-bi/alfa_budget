@@ -1,466 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Fabrice & Alesia Family Budget</title>
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <style>
-        .spinner { animation: spin 1s linear infinite; }
-        @keyframes spin { to { transform: rotate(360deg); } }
-    </style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Fabrice & Alesia Family Budget</title>
+  <meta name="description" content="Real-time collaborative family budget tracker" />
+
+  <!-- React & Babel -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Use plain Lucide icons (NOT lucide-react) -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <style>
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
 </head>
 <body>
-    <div id="root"></div>
-    
-    <script>
-        // Simple Budget Tracker - No Babel, No Lucide Icons
-        const { useState, useEffect, createElement: e } = React;
+  <div id="root">
+    <!-- Loading Screen -->
+    <div style="display: flex; justify-content: center; align-items: center; height: 100vh; background: linear-gradient(to bottom right, #dbeafe, #f3e8ff); font-family: system-ui;">
+      <div style="text-align: center;">
+        <div style="width: 48px; height: 48px; border: 4px solid #3b82f6; border-top: 4px solid transparent; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;"></div>
+        <h2 style="color: #1f2937; margin: 0;">Loading Family Budget...</h2>
+      </div>
+    </div>
+  </div>
 
-        const BudgetApp = () => {
-            // User & Connection States
-            const [currentUser, setCurrentUser] = useState('');
-            const [showUserSetup, setShowUserSetup] = useState(true);
-            const [currentScreen, setCurrentScreen] = useState('dashboard');
-            
-            // Data States
-            const [income, setIncome] = useState([]);
-            const [expenses, setExpenses] = useState([]);
-            const [showAddModal, setShowAddModal] = useState(false);
-            const [selectedDate, setSelectedDate] = useState(null);
-            const [currentMonth, setCurrentMonth] = useState(new Date());
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-            // Categories
-            const incomeCategories = [
-                'Fabrice - Maxa Salary', 'Fabrice - Alfa Company', 'Alesia - Air Transat Salary',
-                'Alesia - Family Allocation', 'Rental - Oscar Benoit (Dominique)',
-                'Rental - Roi René Unit 1 (Jacques)', 'Rental - Roi René Unit 2 (Guy)', 
-                'Rental - Roi René Unit 3 (Alain)', 'Tax Refund', 'Other Income'
-            ];
+    // Minimal example without lucide-react
+    const App = () => {
+      const [user, setUser] = useState("");
 
-            const expenseCategories = [
-                'Food & Groceries', 'Kids - Livia Expenses', 'Kids - Elio Expenses',
-                'Main Residence - Mortgage', 'Utilities', 'Transportation', 'Property Expenses',
-                'Fabrice - Personal', 'Alesia - Personal', 'Fabrice - FTQ', 'Alesia - Savings'
-            ];
+      if (!user) {
+        return (
+          <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 to-purple-50">
+            <div className="bg-white p-8 rounded-2xl shadow-xl">
+              <h1 className="text-2xl font-bold mb-2 text-center">Family Budget Login</h1>
+              <button
+                onClick={() => setUser("Fabrice")}
+                className="w-full p-4 bg-blue-500 text-white rounded-lg mb-3"
+              >
+                Login as Fabrice
+              </button>
+              <button
+                onClick={() => setUser("Alesia")}
+                className="w-full p-4 bg-purple-500 text-white rounded-lg"
+              >
+                Login as Alesia
+              </button>
+            </div>
+          </div>
+        );
+      }
 
-            // Helper Functions
-            const formatDate = (date) => date.toISOString().split('T')[0];
-            const getUserColor = (user) => user === 'Fabrice' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800';
+      return (
+        <div className="p-6 max-w-4xl mx-auto">
+          <h1 className="text-3xl font-bold mb-4">Welcome {user}</h1>
+          <p className="text-gray-600">This is your budget dashboard.</p>
 
-            // Setup User
-            const setupUser = (userName) => {
-                const roomId = 'fabrice-alesia-' + Math.random().toString(36).substr(2, 6);
-                setCurrentUser(userName);
-                localStorage.setItem('currentUser', userName);
-                localStorage.setItem('roomId', roomId);
-                setShowUserSetup(false);
-                
-                // Start simple sync
-                setInterval(() => syncData(roomId), 5000);
-            };
+          <div className="mt-6 flex gap-4">
+            <!-- Example Lucide icons -->
+            <i data-lucide="home"></i>
+            <i data-lucide="calendar"></i>
+            <i data-lucide="settings"></i>
+          </div>
+        </div>
+      );
+    };
 
-            // Simple Sync with localStorage
-            const syncData = (roomId) => {
-                const cloudKey = `budget_${roomId}`;
-                const cloudData = localStorage.getItem(cloudKey);
-                
-                if (cloudData) {
-                    const parsed = JSON.parse(cloudData);
-                    if (parsed.user !== currentUser && parsed.lastUpdate > Date.now() - 30000) {
-                        setIncome(prev => [...prev, ...parsed.income.filter(t => !prev.some(p => p.id === t.id))]);
-                        setExpenses(prev => [...prev, ...parsed.expenses.filter(t => !prev.some(p => p.id === t.id))]);
-                    }
-                }
-                
-                localStorage.setItem(cloudKey, JSON.stringify({
-                    income, expenses, user: currentUser, lastUpdate: Date.now()
-                }));
-            };
+    ReactDOM.render(<App />, document.getElementById("root"));
 
-            // Add Transaction
-            const addTransaction = (type, description, amount, category, date) => {
-                const transaction = {
-                    id: Date.now() + Math.random(),
-                    description, amount: parseFloat(amount), category, date,
-                    addedBy: currentUser, timestamp: Date.now()
-                };
-                
-                if (type === 'income') {
-                    setIncome(prev => [transaction, ...prev]);
-                } else {
-                    setExpenses(prev => [transaction, ...prev]);
-                }
-            };
-
-            // Calculate Metrics
-            const now = new Date();
-            const startOfYear = new Date(now.getFullYear(), 0, 1);
-            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-
-            const totalIncome = income.reduce((sum, t) => sum + t.amount, 0);
-            const totalExpenses = expenses.reduce((sum, t) => sum + t.amount, 0);
-            const currentNet = totalIncome - totalExpenses;
-
-            const ytdIncome = income.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + t.amount, 0);
-            const ytdExpenses = expenses.filter(t => new Date(t.date) >= startOfYear).reduce((sum, t) => sum + t.amount, 0);
-            const ytdNet = ytdIncome - ytdExpenses;
-
-            const mtdIncome = income.filter(t => new Date(t.date) >= startOfMonth).reduce((sum, t) => sum + t.amount, 0);
-            const mtdExpenses = expenses.filter(t => new Date(t.date) >= startOfMonth).reduce((sum, t) => sum + t.amount, 0);
-            const mtdNet = mtdIncome - mtdExpenses;
-
-            // Load saved data on startup
-            useEffect(() => {
-                const savedUser = localStorage.getItem('currentUser');
-                const savedIncome = localStorage.getItem('budgetIncome');
-                const savedExpenses = localStorage.getItem('budgetExpenses');
-                
-                if (savedUser) {
-                    setCurrentUser(savedUser);
-                    setShowUserSetup(false);
-                }
-                if (savedIncome) setIncome(JSON.parse(savedIncome));
-                if (savedExpenses) setExpenses(JSON.parse(savedExpenses));
-            }, []);
-
-            // Save data when changed
-            useEffect(() => {
-                if (income.length > 0) localStorage.setItem('budgetIncome', JSON.stringify(income));
-            }, [income]);
-            
-            useEffect(() => {
-                if (expenses.length > 0) localStorage.setItem('budgetExpenses', JSON.stringify(expenses));
-            }, [expenses]);
-
-            // User Setup Screen
-            if (showUserSetup) {
-                return e('div', { className: 'min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center p-6' },
-                    e('div', { className: 'bg-white rounded-2xl shadow-xl p-8 max-w-md w-full' }, [
-                        e('div', { key: 'header', className: 'text-center mb-8' }, [
-                            e('div', { key: 'icon', className: 'mx-auto h-16 w-16 bg-blue-600 rounded-full flex items-center justify-center mb-4' },
-                                e('span', { className: 'text-white text-2xl font-bold' }, '💰')
-                            ),
-                            e('h1', { key: 'title', className: 'text-2xl font-bold text-gray-800 mb-2' }, 'Family Budget Login'),
-                            e('p', { key: 'subtitle', className: 'text-gray-600' }, 'Choose your identity to track transactions')
-                        ]),
-                        e('div', { key: 'buttons', className: 'space-y-4' }, [
-                            e('button', {
-                                key: 'fabrice',
-                                onClick: () => setupUser('Fabrice'),
-                                className: 'w-full p-4 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-lg font-semibold'
-                            }, '👤 Login as Fabrice'),
-                            e('button', {
-                                key: 'alesia',
-                                onClick: () => setupUser('Alesia'),
-                                className: 'w-full p-4 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition text-lg font-semibold'
-                            }, '👤 Login as Alesia')
-                        ])
-                    ])
-                );
-            }
-
-            // Transaction Modal
-            const TransactionModal = () => {
-                const [formData, setFormData] = useState({
-                    description: '', amount: '', category: expenseCategories[0], type: 'expense'
-                });
-
-                if (!showAddModal) return null;
-
-                return e('div', {
-                    className: 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4',
-                    onClick: () => setShowAddModal(false)
-                }, e('div', {
-                    className: 'bg-white rounded-lg shadow-xl max-w-md w-full p-6',
-                    onClick: e => e.stopPropagation()
-                }, [
-                    e('h3', { key: 'title', className: 'text-lg font-semibold mb-4' }, 
-                        `Add Transaction for ${selectedDate?.toLocaleDateString()}`
-                    ),
-                    e('div', { key: 'form', className: 'space-y-4' }, [
-                        e('input', {
-                            key: 'desc',
-                            type: 'text',
-                            placeholder: 'Description (e.g., Jacques rent, groceries)',
-                            value: formData.description,
-                            onChange: e => setFormData({...formData, description: e.target.value}),
-                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }),
-                        e('input', {
-                            key: 'amount',
-                            type: 'number',
-                            placeholder: 'Amount',
-                            step: '0.01',
-                            value: formData.amount,
-                            onChange: e => setFormData({...formData, amount: e.target.value}),
-                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }),
-                        e('select', {
-                            key: 'type',
-                            value: formData.type,
-                            onChange: e => setFormData({
-                                ...formData, 
-                                type: e.target.value,
-                                category: e.target.value === 'income' ? incomeCategories[0] : expenseCategories[0]
-                            }),
-                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }, [
-                            e('option', { key: 'expense', value: 'expense' }, '💸 Expense'),
-                            e('option', { key: 'income', value: 'income' }, '💰 Income')
-                        ]),
-                        e('select', {
-                            key: 'category',
-                            value: formData.category,
-                            onChange: e => setFormData({...formData, category: e.target.value}),
-                            className: 'w-full p-3 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500'
-                        }, (formData.type === 'income' ? incomeCategories : expenseCategories).map(cat =>
-                            e('option', { key: cat, value: cat }, cat)
-                        )),
-                        e('div', { key: 'buttons', className: 'flex gap-3 pt-2' }, [
-                            e('button', {
-                                key: 'save',
-                                onClick: () => {
-                                    if (formData.description && formData.amount) {
-                                        addTransaction(formData.type, formData.description, formData.amount, formData.category, formatDate(selectedDate));
-                                        setShowAddModal(false);
-                                        setFormData({ description: '', amount: '', category: expenseCategories[0], type: 'expense' });
-                                    }
-                                },
-                                disabled: !formData.description || !formData.amount,
-                                className: 'flex-1 bg-blue-600 text-white p-3 rounded-md hover:bg-blue-700 disabled:bg-gray-400'
-                            }, '➕ Add Transaction'),
-                            e('button', {
-                                key: 'cancel',
-                                onClick: () => setShowAddModal(false),
-                                className: 'flex-1 bg-gray-300 text-gray-700 p-3 rounded-md hover:bg-gray-400'
-                            }, 'Cancel')
-                        ])
-                    ])
-                ]));
-            };
-
-            // Navigation
-            const Navigation = () => e('nav', { className: 'bg-white shadow-md p-4 mb-6 rounded-lg' },
-                e('div', { className: 'flex flex-wrap gap-4 justify-center' }, [
-                    e('button', {
-                        key: 'dashboard',
-                        onClick: () => setCurrentScreen('dashboard'),
-                        className: `px-4 py-2 rounded-lg transition ${currentScreen === 'dashboard' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
-                    }, '🏠 Dashboard'),
-                    e('button', {
-                        key: 'calendar',
-                        onClick: () => setCurrentScreen('calendar'),
-                        className: `px-4 py-2 rounded-lg transition ${currentScreen === 'calendar' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700 hover:bg-gray-200'}`
-                    }, '📅 Calendar')
-                ])
-            );
-
-            // Dashboard
-            const Dashboard = () => e('div', {}, [
-                // Metrics Cards
-                e('div', { key: 'metrics', className: 'grid grid-cols-1 md:grid-cols-4 gap-6 mb-8' }, [
-                    e('div', { key: 'ytd', className: 'bg-blue-50 p-6 rounded-lg shadow-md border border-blue-200' }, [
-                        e('h3', { key: 'title', className: 'text-lg font-semibold text-blue-800 mb-3' }, 'Year to Date'),
-                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-blue-600' }, 'Revenue:'),
-                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${ytdIncome.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-blue-600' }, 'Expenses:'),
-                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${ytdExpenses.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
-                            e('span', { key: 'label', className: 'font-semibold text-blue-800' }, 'Net:'),
-                            e('span', { 
-                                key: 'value', 
-                                className: `font-bold ${ytdNet >= 0 ? 'text-blue-600' : 'text-orange-600'}`
-                            }, `$${ytdNet.toFixed(2)}`)
-                        ])
-                    ]),
-                    
-                    e('div', { key: 'mtd', className: 'bg-green-50 p-6 rounded-lg shadow-md border border-green-200' }, [
-                        e('h3', { key: 'title', className: 'text-lg font-semibold text-green-800 mb-3' }, 'Month to Date'),
-                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-green-600' }, 'Revenue:'),
-                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${mtdIncome.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-green-600' }, 'Expenses:'),
-                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${mtdExpenses.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
-                            e('span', { key: 'label', className: 'font-semibold text-green-800' }, 'Net:'),
-                            e('span', { 
-                                key: 'value', 
-                                className: `font-bold ${mtdNet >= 0 ? 'text-green-600' : 'text-orange-600'}`
-                            }, `$${mtdNet.toFixed(2)}`)
-                        ])
-                    ]),
-
-                    e('div', { key: 'current', className: 'bg-purple-50 p-6 rounded-lg shadow-md border border-purple-200' }, [
-                        e('h3', { key: 'title', className: 'text-lg font-semibold text-purple-800 mb-3' }, 'Current Position'),
-                        e('div', { key: 'revenue', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-purple-600' }, 'Total Revenue:'),
-                            e('span', { key: 'value', className: 'font-bold text-green-600' }, `$${totalIncome.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'expenses', className: 'flex justify-between mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-purple-600' }, 'Total Expenses:'),
-                            e('span', { key: 'value', className: 'font-bold text-red-600' }, `$${totalExpenses.toFixed(2)}`)
-                        ]),
-                        e('div', { key: 'net', className: 'flex justify-between border-t pt-2' }, [
-                            e('span', { key: 'label', className: 'font-semibold text-purple-800' }, 'Net:'),
-                            e('span', { 
-                                key: 'value', 
-                                className: `font-bold ${currentNet >= 0 ? 'text-purple-600' : 'text-orange-600'}`
-                            }, `$${currentNet.toFixed(2)}`)
-                        ])
-                    ]),
-
-                    e('div', { key: 'info', className: 'bg-orange-50 p-6 rounded-lg shadow-md border border-orange-200' }, [
-                        e('h3', { key: 'title', className: 'text-lg font-semibold text-orange-800 mb-3' }, 'Status'),
-                        e('div', { key: 'user', className: 'mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-orange-600' }, 'User: '),
-                            e('span', { key: 'value', className: `text-sm px-2 py-1 rounded ${getUserColor(currentUser)}` }, currentUser)
-                        ]),
-                        e('div', { key: 'transactions', className: 'mb-2' }, [
-                            e('span', { key: 'label', className: 'text-sm text-orange-600' }, 'Transactions: '),
-                            e('span', { key: 'value', className: 'font-bold text-orange-800' }, income.length + expenses.length)
-                        ])
-                    ])
-                ]),
-
-                // Recent Activity
-                e('div', { key: 'activity', className: 'bg-white rounded-lg shadow-md p-6' }, [
-                    e('h2', { key: 'title', className: 'text-xl font-semibold text-gray-800 mb-4' }, 'Recent Activity'),
-                    e('div', { key: 'list', className: 'space-y-3' },
-                        [...income, ...expenses]
-                            .sort((a, b) => b.timestamp - a.timestamp)
-                            .slice(0, 10)
-                            .map(transaction =>
-                                e('div', {
-                                    key: transaction.id,
-                                    className: 'flex items-center justify-between p-3 bg-gray-50 rounded-lg'
-                                }, [
-                                    e('div', { key: 'info', className: 'flex items-center gap-3' }, [
-                                        e('span', {
-                                            key: 'user',
-                                            className: `text-xs px-2 py-1 rounded-full font-medium ${getUserColor(transaction.addedBy)}`
-                                        }, transaction.addedBy),
-                                        e('div', { key: 'details' }, [
-                                            e('div', { key: 'desc', className: 'font-semibold text-gray-800' }, transaction.description),
-                                            e('div', { key: 'meta', className: 'text-sm text-gray-600' }, 
-                                                `${transaction.category} • ${new Date(transaction.date).toLocaleDateString()}`
-                                            )
-                                        ])
-                                    ]),
-                                    e('span', {
-                                        key: 'amount',
-                                        className: `font-bold ${income.includes(transaction) ? 'text-green-600' : 'text-red-600'}`
-                                    }, `${income.includes(transaction) ? '+' : '-'}$${transaction.amount.toFixed(2)}`)
-                                ])
-                            )
-                    )
-                ])
-            ]);
-
-            // Calendar
-            const Calendar = () => {
-                const getDaysInMonth = (date) => new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
-                const getFirstDayOfMonth = (date) => new Date(date.getFullYear(), date.getMonth(), 1).getDay();
-
-                const handleDateClick = (day) => {
-                    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-                    setSelectedDate(clickedDate);
-                    setShowAddModal(true);
-                };
-
-                const navigateMonth = (direction) => {
-                    setCurrentMonth(new Date(currentMonth.getFullYear(), currentMonth.getMonth() + direction, 1));
-                };
-
-                return e('div', { className: 'bg-white rounded-lg shadow-md p-6' }, [
-                    e('div', { key: 'header', className: 'flex items-center justify-between mb-6' }, [
-                        e('h2', { key: 'title', className: 'text-2xl font-semibold text-gray-800' },
-                            currentMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-                        ),
-                        e('div', { key: 'nav', className: 'flex gap-2' }, [
-                            e('button', {
-                                key: 'prev',
-                                onClick: () => navigateMonth(-1),
-                                className: 'px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200'
-                            }, '← Previous'),
-                            e('button', {
-                                key: 'today',
-                                onClick: () => setCurrentMonth(new Date()),
-                                className: 'px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200'
-                            }, 'Today'),
-                            e('button', {
-                                key: 'next',
-                                onClick: () => navigateMonth(1),
-                                className: 'px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200'
-                            }, 'Next →')
-                        ])
-                    ]),
-                    
-                    e('div', { key: 'instructions', className: 'mb-4 p-3 bg-blue-50 rounded-lg border border-blue-200' },
-                        e('p', { className: 'text-sm text-blue-800' }, '💡 Click any date to add transactions!')
-                    ),
-
-                    e('div', { key: 'grid', className: 'grid grid-cols-7 gap-1' }, [
-                        // Day headers
-                        ...['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day =>
-                            e('div', {
-                                key: day,
-                                className: 'h-10 flex items-center justify-center font-semibold text-gray-700 bg-gray-100 rounded'
-                            }, day)
-                        ),
-                        // Empty cells for days before month starts
-                        ...Array.from({ length: getFirstDayOfMonth(currentMonth) }, (_, i) =>
-                            e('div', { key: `empty-${i}`, className: 'h-20 border border-gray-200 bg-gray-50' })
-                        ),
-                        // Calendar days
-                        ...Array.from({ length: getDaysInMonth(currentMonth) }, (_, i) => {
-                            const day = i + 1;
-                            const isToday = new Date().toDateString() === new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString();
-                            return e('button', {
-                                key: day,
-                                onClick: () => handleDateClick(day),
-                                className: `h-20 border border-gray-200 cursor-pointer hover:bg-blue-50 transition p-1 text-left ${
-                                    isToday ? 'bg-blue-100 border-blue-300' : 'bg-white'
-                                }`
-                            }, [
-                                e('div', {
-                                    key: 'day',
-                                    className: `text-sm font-semibold ${isToday ? 'text-blue-600' : 'text-gray-700'}`
-                                }, day),
-                                e('div', { key: 'hint', className: 'text-xs text-gray-400 mt-1' }, 'Click to add')
-                            ]);
-                        })
-                    ])
-                ]);
-            };
-
-            // Main App Render
-            return e('div', { className: 'max-w-7xl mx-auto p-6 bg-gray-50 min-h-screen' }, [
-                e('header', { key: 'header', className: 'text-center mb-6' }, [
-                    e('h1', { key: 'title', className: 'text-3xl font-bold text-gray-800 mb-2' }, 'Fabrice & Alesia Budget'),
-                    e('p', { key: 'subtitle', className: 'text-gray-600' }, 'Simple collaborative family budget tracker')
-                ]),
-                
-                e(Navigation, { key: 'nav' }),
-                
-                currentScreen === 'dashboard' && e(Dashboard, { key: 'dashboard' }),
-                currentScreen === 'calendar' && e(Calendar, { key: 'calendar' }),
-                
-                e(TransactionModal, { key: 'modal' })
-            ]);
-        };
-
-        // Render the app
-        ReactDOM.render(React.createElement(BudgetApp), document.getElementById('root'));
-    </script>
+    // Activate Lucide icons after rendering
+    lucide.createIcons();
+  </script>
 </body>
 </html>
